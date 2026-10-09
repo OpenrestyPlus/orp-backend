@@ -35,6 +35,12 @@ func NewMux(database *sql.DB) *http.ServeMux {
 func NewMuxWithRedis(database *sql.DB, redisClient *redis.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 	server := &Server{db: database, redis: redisClient}
+	mux.HandleFunc("POST /api/orp/nodes/{id}/agent/reload", server.agentReloadTaskCreate)
+	mux.HandleFunc("GET /api/orp/nodes/{id}/agent/tasks", server.agentTasksList)
+	mux.HandleFunc("PUT /api/orp/nodes/{id}/agent/certificate", server.agentCertificateRegister)
+	mux.HandleFunc("POST /api/agent/v1/heartbeat", server.agentHeartbeat)
+	mux.HandleFunc("GET /api/agent/v1/tasks/next", server.agentNextTask)
+	mux.HandleFunc("POST /api/agent/v1/tasks/{taskId}/result", server.agentTaskResult)
 	if redisClient != nil {
 		StartDashboardSnapshotWorker(context.Background(), database, redisClient)
 	}
@@ -186,6 +192,17 @@ func NewMuxWithRedis(database *sql.DB, redisClient *redis.Client) *http.ServeMux
 	mux.HandleFunc("POST /api/centers/{centerID}/runtime-configurations", server.publishRuntimeConfiguration)
 	mux.HandleFunc("GET /api/centers/{centerID}/control-api-reloads", server.listReloadTasks)
 	mux.HandleFunc("GET /api/centers/{centerID}/control-api-reloads/paged", server.pageReloadTasks)
+	return mux
+}
+
+// NewAgentMux exposes only the mTLS-protected node protocol on its dedicated
+// listener, keeping browser and user APIs on the regular control-plane port.
+func NewAgentMux(database *sql.DB) *http.ServeMux {
+	mux := http.NewServeMux()
+	server := &Server{db: database}
+	mux.HandleFunc("POST /api/agent/v1/heartbeat", server.agentHeartbeat)
+	mux.HandleFunc("GET /api/agent/v1/tasks/next", server.agentNextTask)
+	mux.HandleFunc("POST /api/agent/v1/tasks/{taskId}/result", server.agentTaskResult)
 	return mux
 }
 

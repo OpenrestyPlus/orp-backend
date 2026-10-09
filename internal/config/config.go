@@ -10,14 +10,18 @@ import (
 )
 
 type Config struct {
-	HTTPAddress     string
-	MySQLDSN        string
-	RedisAddress    string
-	RedisPassword   string
-	RedisDB         int
-	KafkaBrokers    []string
-	KafkaTopic      string
-	KafkaConsumerID string
+	HTTPAddress       string
+	AgentHTTPSAddress string
+	TLSCertFile       string
+	TLSKeyFile        string
+	AgentClientCAFile string
+	MySQLDSN          string
+	RedisAddress      string
+	RedisPassword     string
+	RedisDB           int
+	KafkaBrokers      []string
+	KafkaTopic        string
+	KafkaConsumerID   string
 }
 
 func Load() (Config, error) {
@@ -43,6 +47,13 @@ func Load() (Config, error) {
 	}
 	if len(strings.TrimSpace(os.Getenv("OPENRESTY_DATA_KEY"))) != 64 {
 		return Config{}, fmt.Errorf("OPENRESTY_DATA_KEY must be 32 random bytes encoded as 64 hex characters")
+	}
+	agentHTTPSAddress := strings.TrimSpace(os.Getenv("OPENRESTY_AGENT_HTTPS_ADDR"))
+	tlsCert := strings.TrimSpace(os.Getenv("OPENRESTY_AGENT_TLS_CERT_FILE"))
+	tlsKey := strings.TrimSpace(os.Getenv("OPENRESTY_AGENT_TLS_KEY_FILE"))
+	clientCA := strings.TrimSpace(os.Getenv("OPENRESTY_AGENT_CLIENT_CA_FILE"))
+	if (agentHTTPSAddress != "" || tlsCert != "" || tlsKey != "" || clientCA != "") && (agentHTTPSAddress == "" || tlsCert == "" || tlsKey == "" || clientCA == "") {
+		return Config{}, fmt.Errorf("OPENRESTY_AGENT_HTTPS_ADDR, OPENRESTY_AGENT_TLS_CERT_FILE, OPENRESTY_AGENT_TLS_KEY_FILE, and OPENRESTY_AGENT_CLIENT_CA_FILE must be configured together")
 	}
 	brokers := []string{}
 	for _, broker := range strings.Split(os.Getenv("OPENRESTY_KAFKA_BOOTSTRAP_SERVERS"), ",") {
@@ -78,5 +89,5 @@ func Load() (Config, error) {
 		}
 		redisDB = parsedDB
 	}
-	return Config{HTTPAddress: address, MySQLDSN: fmt.Sprintf("%s:%s@tcp(%s)%s?parseTime=true&charset=utf8mb4&multiStatements=true", user, password, parsed.Host, parsed.EscapedPath()), RedisAddress: redisAddress, RedisPassword: os.Getenv("OPENRESTY_REDIS_PASSWORD"), RedisDB: redisDB, KafkaBrokers: brokers, KafkaTopic: topic, KafkaConsumerID: consumerID}, nil
+	return Config{HTTPAddress: address, AgentHTTPSAddress: agentHTTPSAddress, TLSCertFile: tlsCert, TLSKeyFile: tlsKey, AgentClientCAFile: clientCA, MySQLDSN: fmt.Sprintf("%s:%s@tcp(%s)%s?parseTime=true&charset=utf8mb4&multiStatements=true", user, password, parsed.Host, parsed.EscapedPath()), RedisAddress: redisAddress, RedisPassword: os.Getenv("OPENRESTY_REDIS_PASSWORD"), RedisDB: redisDB, KafkaBrokers: brokers, KafkaTopic: topic, KafkaConsumerID: consumerID}, nil
 }

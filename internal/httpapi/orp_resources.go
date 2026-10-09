@@ -258,6 +258,10 @@ func (s *Server) orpCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if kind == "nodes" && (body["agentId"] != nil || body["agentCertificateFingerprint"] != nil) {
+		orpFailure(w, 400, "请使用受限的 Agent 证书登记接口设置节点身份")
+		return
+	}
 	if err := orpNormalize(kind, body); err != nil {
 		orpFailure(w, 400, err.Error())
 		return
@@ -360,6 +364,17 @@ func (s *Server) orpUpdate(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(previous, &old); err != nil {
 		orpFailure(w, 500, "资源数据损坏")
 		return
+	}
+	if kind == "nodes" {
+		if body["agentId"] != nil && toString(body["agentId"]) != toString(old["agentId"]) || body["agentCertificateFingerprint"] != nil && strings.ToLower(toString(body["agentCertificateFingerprint"])) != strings.ToLower(toString(old["agentCertificateFingerprint"])) {
+			orpFailure(w, 403, "Agent 身份只能通过受限的证书登记接口修改")
+			return
+		}
+		for _, field := range []string{"agentId", "agentCertificateFingerprint"} {
+			if value, exists := old[field]; exists {
+				body[field] = value
+			}
+		}
 	}
 	if kind == "upstream-groups" && toString(old["name"]) != toString(body["name"]) {
 		if err := s.orpCheckReferences(r.Context(), kind, id); err != nil {

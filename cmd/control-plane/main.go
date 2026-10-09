@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -60,5 +63,20 @@ func main() {
 	})
 	server := &http.Server{Addr: configuration.HTTPAddress, Handler: httpapi.NewWithRedis(database, redisClient)}
 	log.Printf("openresty-plus Go control plane listening on %s", configuration.HTTPAddress)
+	if configuration.AgentHTTPSAddress != "" {
+		caPEM, err := os.ReadFile(configuration.AgentClientCAFile)
+		if err != nil {
+			log.Fatalf("read Agent client CA: %v", err)
+		}
+		clientCAs := x509.NewCertPool()
+		if !clientCAs.AppendCertsFromPEM(caPEM) {
+			log.Fatal("Agent client CA contains no certificates")
+		}
+		agentServer := &http.Server{Addr: configuration.AgentHTTPSAddress, Handler: httpapi.NewAgentMux(database), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 60 * time.Second, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12, ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: clientCAs}}
+		go func() {
+			log.Printf("openresty-plus Agent mTLS listener on %s", configuration.AgentHTTPSAddress)
+			log.Fatal(agentServer.ListenAndServeTLS(configuration.TLSCertFile, configuration.TLSKeyFile))
+		}()
+	}
 	log.Fatal(server.ListenAndServe())
 }

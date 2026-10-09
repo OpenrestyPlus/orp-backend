@@ -135,12 +135,9 @@
 - 不在本 PRD 中重新设计完整的权限、组织架构或 OAuth2 身份体系。
 - 不覆盖第三方 CDN、WAF、Ingress 或云厂商专属错误页机制。
 
-## 当前交付状态（2026-09-27）
+## 当前交付状态
 
-- `docker-compose.yaml` 的 `control-plane` 使用 `backend`，Go 服务监听 8081，并已验证 `/healthz`、中心列表、HTTP 设置、Stream Server 查询与节点指标接口可访问。
-- Go 已实现 Center、节点、节点指标、HTTP 设置、HTTP Upstream/Target、HTTP Server/Location、TLS、Stream、DNS Resolver 与审计查询接口。
-- 配置版本/草稿/回滚、原生配置渲染/物化、Control API reload、中心发布、字典、IP/API 策略资源和 Kafka/SSE 日志尚未完整实现，当前不能提供完整发布闭环。
-- 因此，“Go 控制面已启动”仅证明已迁移资源管理 API 可用，不证明配置已经渲染、reload 或发布到节点。
+本 PRD 记录产品需求，不作为当前实现状态的权威清单。Go 后端现状与验证边界请查阅 [`frontend-backend-migration-status.md`](frontend-backend-migration-status.md)。截至 2026-10-08，本地 Compose 已实现三固定节点的渲染、目标校验、分批发布、版本确认和回滚；PRD 中提出的通用节点登记、生产发布、安全最小权限及完整运行时契约仍未全部实现。保存配置、通过本地节点校验、发布到本地示例节点和生产环境验收是不同阶段。
 
 ## Further Notes
 
